@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "electrode-monitor"
+version = "0.1.0"
+description = "Local electrode mV monitoring, CSV logging and passive serial traffic display"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
+dependencies = ["pyserial==3.5"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+]
+
+[project.gui-scripts]
+electrode-monitor = "electrode_monitor:main"
+
+[tool.setuptools]
+py-modules = ["electrode_monitor", "serial_protocol", "session_log"]

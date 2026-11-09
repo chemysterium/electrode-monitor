@@ -1,0 +1,63 @@
+name: Test and package
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        python-version: ['3.10', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Linux display dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y python3-tk xvfb xauth
+      - name: Install
+        run: python -m pip install .
+      - name: Offline tests (no instrument access)
+        run: python -m unittest discover -s tests -v
+      - name: Windows GUI smoke test (no connection)
+        if: runner.os == 'Windows'
+        run: python -c "from electrode_monitor import App; app = App(); app.after(500, app.on_close); app.mainloop()"
+      - name: Linux GUI smoke test (no connection)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a python -c "from electrode_monitor import App; app = App(); app.after(500, app.on_close); app.mainloop()"
+
+  package:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install build tool
+        run: python -m pip install build
+      - name: Build source distribution and wheel
+        run: python -m build
+      - name: Verify wheel installation
+        shell: pwsh
+        run: |
+          $wheel = (Get-ChildItem dist/*.whl).FullName
+          python -m pip install $wheel
+          Push-Location $env:RUNNER_TEMP
+          python -c "import electrode_monitor, serial_protocol, session_log"
+          Pop-Location
+      - name: Save distribution files
+        uses: actions/upload-artifact@v7
+        with:
+          name: electrode-monitor-distributions
+          path: dist/*
+          if-no-files-found: error
